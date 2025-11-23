@@ -1,0 +1,95 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: org-vault-postgres
+    restart: unless-stopped
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_USER: vault_user
+      POSTGRES_PASSWORD: vault_password
+      POSTGRES_DB: vault_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U vault_user -d vault_db']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - vault-network
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: org-vault-api
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      # Database
+      DATABASE_URL: postgresql://vault_user:vault_password@postgres:5432/vault_db
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_USER: vault_user
+      DATABASE_PASSWORD: vault_password
+      DATABASE_NAME: vault_db
+
+      # AI Provider (set to 'claude' or 'openai')
+      AI_PROVIDER: ${AI_PROVIDER:-openai}
+
+      # OpenAI Configuration
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o}
+
+      # Anthropic/Claude Configuration
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-3-5-sonnet-20241022}
+
+      # Application
+      NODE_ENV: production
+      PORT: 3000
+      UPLOAD_DIR: /app/uploads
+    volumes:
+      - uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://localhost:3000/api/documents']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - vault-network
+
+  vault:
+    build:
+      context: .
+      dockerfile: apps/vault/Dockerfile
+    container_name: org-vault-frontend
+    restart: unless-stopped
+    ports:
+      - '80:80'
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://localhost:80']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - vault-network
+
+volumes:
+  postgres_data:
+    driver: local
+  uploads:
+    driver: local
+
+networks:
+  vault-network:
+    driver: bridge
