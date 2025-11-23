@@ -1,0 +1,25 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "module": "commonjs",
+    "types": ["node"],
+    "rootDir": "src",
+    "moduleResolution": "node",
+    "tsBuildInfoFile": "dist/tsconfig.app.tsbuildinfo",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "target": "es2021",
+    "esModuleInterop": true,
+    "declaration": true,
+    "removeComments": true,
+    "incremental": true,
+    "resolveJsonModule": true,
+    "sourceMap": true,
+    "strict": false,
+    "emitDeclarationOnly": false,
+    "composite": false
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["eslint.config.js", "eslint.config.cjs", "eslint.config.mjs", "node_modules", "dist"]
+}
